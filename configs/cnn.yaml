@@ -7,11 +7,11 @@ frame_length: 0.04
 chunk_length: 0.5
 dropout_rate: 0
 learning_rate: 0.05
-num_epochs_warmup: 5
+num_epochs_warmup: 1
 gradient_clip_val: 1.0
 alpha: 1
 
 # Experimental setup
-dataset: [ansim, resim, real]
-max_epochs: 200
+dataset: [real]
+max_epochs: 2
 manual_seed: 1234

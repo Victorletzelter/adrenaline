@@ -92,6 +92,8 @@ if __name__ == '__main__':
                 'logger': logger,
                 'checkpoint_callback': checkpoint_callback,
                 'progress_bar_refresh_rate': 5,
+                'val_check_interval': 1.0,
+                'log_every_n_steps':1,
             }
 
             if torch.cuda.is_available():

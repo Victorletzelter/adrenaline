@@ -1,6 +1,7 @@
 numpy==1.20.1
 pandas==1.2.2
 pytorch_lightning==1.2.1
-PyYAML==5.4.1
+PyYAML>=5.1,!=5.4.*
 scipy==1.6.1
 torch==1.7.1
+tensorboard>=2.2.0

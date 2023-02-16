@@ -73,6 +73,8 @@ class AbstractLocalizationModule(ptl.LightningModule, abc.ABC):
         learning_rate = self.trainer.optimizers[0].param_groups[0]['lr']
 
         self.log_dict({'val_loss': average_loss, 'learning_rate': learning_rate})
+        
+        return average_loss
 
     def test_step(self,
                   batch: Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]],
