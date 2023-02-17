@@ -22,7 +22,7 @@ class AbstractLocalizationModule(ptl.LightningModule, abc.ABC):
         self.cv_fold_idx = cv_fold_idx
 
         self.hparams = hparams
-
+         
         self.loss_function = self.get_loss_function()
 
     @abc.abstractmethod

@@ -4,13 +4,15 @@ import json
 from models import *
 import numpy as np
 import os
+import pytorch_lightning
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TestTubeLogger
+# from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
 import torch.backends.cudnn as cudnn
 import yaml
-
+import datetime
 
 def get_experiment_hash(hparams):
     """Generates a unique hash-value depending on the provided experimental parameters."""
@@ -18,6 +20,9 @@ def get_experiment_hash(hparams):
 
     return hashlib.md5(json.dumps(vars(experiment_parameters), sort_keys=True).encode('utf-8')).hexdigest()
 
+def current_time() :
+    """Generates the current time in format '%Y-%m-%d-%H:%M:%S'.""" 
+    return datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
 
 if __name__ == '__main__':
     """This is the main function to run experiments. The most convenient way to use it, is via calling
@@ -48,7 +53,8 @@ if __name__ == '__main__':
 
     hparams = Namespace(**config)
 
-    experiment_hash = get_experiment_hash(hparams)
+    experiment_hash = current_time()
+    #experiment_hash = 'name'
     experiment_dir = os.path.join(args.log_dir, experiment_hash)
 
     results_dir = os.path.join(experiment_dir, 'results')
@@ -76,24 +82,39 @@ if __name__ == '__main__':
 
             print('Model: ' + model_name + ', Num. parameters: ' + str(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 
+            # logger = TensorBoardLogger(save_dir=os.path.join(experiment_dir, 'logs'),
+            #                         name=model_name,
+            #                         version=0)
+
             logger = TestTubeLogger(save_dir=os.path.join(experiment_dir, 'logs'),
                                     name=model_name,
                                     debug=False,
                                     create_git_tag=False,
                                     version=0)
-            checkpoint_callback = ModelCheckpoint(dirpath=os.path.join(experiment_dir, 'checkpoints'),
-                                                  filename=config['name'] + '_' + str(cv_fold_idx) + '.ckpt',
-                                                  monitor='val_loss',
-                                                  mode='min')
+            
+            # checkpoint_callback = ModelCheckpoint(dirpath=os.path.join(experiment_dir, 'checkpoints'),
+            #                                       filename=config['name'] + '_' + str(cv_fold_idx) + '.ckpt',
+            #                                       monitor='val_loss',
+            #                                       mode='min',
+            #                                       every_n_train_steps=100)
 
+            # trainer_args = {
+            #     'max_epochs': config['max_epochs'],
+            #     'gradient_clip_val': config['gradient_clip_val'],
+            #     'logger': logger,
+            #     'checkpoint_callback': checkpoint_callback,
+            #     'progress_bar_refresh_rate': 5,
+            #     'val_check_interval': 1600,
+            #     'log_every_n_steps': 1,
+            # }
+            
             trainer_args = {
                 'max_epochs': config['max_epochs'],
                 'gradient_clip_val': config['gradient_clip_val'],
                 'logger': logger,
-                'checkpoint_callback': checkpoint_callback,
                 'progress_bar_refresh_rate': 5,
-                'val_check_interval': 1.0,
-                'log_every_n_steps':1,
+                'val_check_interval': 1600,
+                'log_every_n_steps': 1,
             }
 
             if torch.cuda.is_available():

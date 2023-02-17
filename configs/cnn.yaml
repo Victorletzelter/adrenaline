@@ -12,6 +12,7 @@ gradient_clip_val: 1.0
 alpha: 1
 
 # Experimental setup
-dataset: [real]
-max_epochs: 2
+dataset: ['ansim']
+max_epochs: 100
+
 manual_seed: 1234
