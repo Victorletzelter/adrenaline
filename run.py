@@ -6,8 +6,8 @@ import numpy as np
 import os
 import pytorch_lightning
 from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import TestTubeLogger
-# from pytorch_lightning.loggers import TensorBoardLogger
+# from pytorch_lightning.loggers import TestTubeLogger
+from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torch
 import torch.backends.cudnn as cudnn
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--tmp_dir', default='./tmp', help='Path to store temporary files')
     parser.add_argument('--log_dir', default='./experiments', help='Path to store models and experiment logs')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
-    parser.add_argument('--num_workers', type=int, default=1, help='Number of parallel subprocesses')
+    parser.add_argument('--num_workers', type=int, default=16, help='Number of parallel subprocesses')
 
     args = parser.parse_args()
 
@@ -68,6 +68,8 @@ if __name__ == '__main__':
     hparams.batch_size = args.batch_size
     hparams.num_workers = args.num_workers
     hparams.results_dir = results_dir
+    
+    hparams = vars(hparams)
 
     for dataset in config['dataset']:
         dataset_path = os.path.join(args.data_root, dataset)
@@ -82,39 +84,25 @@ if __name__ == '__main__':
 
             print('Model: ' + model_name + ', Num. parameters: ' + str(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 
-            # logger = TensorBoardLogger(save_dir=os.path.join(experiment_dir, 'logs'),
-            #                         name=model_name,
-            #                         version=0)
-
-            logger = TestTubeLogger(save_dir=os.path.join(experiment_dir, 'logs'),
+            logger = TensorBoardLogger(save_dir=os.path.join(experiment_dir, 'logs'),
                                     name=model_name,
-                                    debug=False,
-                                    create_git_tag=False,
                                     version=0)
-            
-            # checkpoint_callback = ModelCheckpoint(dirpath=os.path.join(experiment_dir, 'checkpoints'),
-            #                                       filename=config['name'] + '_' + str(cv_fold_idx) + '.ckpt',
-            #                                       monitor='val_loss',
-            #                                       mode='min',
-            #                                       every_n_train_steps=100)
 
-            # trainer_args = {
-            #     'max_epochs': config['max_epochs'],
-            #     'gradient_clip_val': config['gradient_clip_val'],
-            #     'logger': logger,
-            #     'checkpoint_callback': checkpoint_callback,
-            #     'progress_bar_refresh_rate': 5,
-            #     'val_check_interval': 1600,
-            #     'log_every_n_steps': 1,
-            # }
+            checkpoint_callback = ModelCheckpoint(dirpath=os.path.join(experiment_dir, 'checkpoints'),
+                                                  filename=config['name'] + '_' + str(cv_fold_idx) + '.ckpt',
+                                                  monitor='val_loss',
+                                                  mode='min',
+                                                  every_n_train_steps=100)
             
             trainer_args = {
                 'max_epochs': config['max_epochs'],
                 'gradient_clip_val': config['gradient_clip_val'],
                 'logger': logger,
-                'progress_bar_refresh_rate': 5,
-                'val_check_interval': 1600,
+                'callbacks': [checkpoint_callback],
+                'val_check_interval': 16,
                 'log_every_n_steps': 1,
+                'limit_val_batches': 1,
+                'limit_test_batches': 1,
             }
 
             if torch.cuda.is_available():

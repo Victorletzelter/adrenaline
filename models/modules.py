@@ -21,9 +21,13 @@ class AbstractLocalizationModule(ptl.LightningModule, abc.ABC):
         self.dataset_path = dataset_path
         self.cv_fold_idx = cv_fold_idx
 
-        self.hparams = hparams
+        self._hparams = hparams
          
         self.loss_function = self.get_loss_function()
+        
+    @property
+    def hparams(self):
+        return self._hparams
 
     @abc.abstractmethod
     def forward(self,
@@ -34,10 +38,10 @@ class AbstractLocalizationModule(ptl.LightningModule, abc.ABC):
         raise NotImplementedError
 
     def configure_optimizers(self) -> Tuple[List[torch.optim.Optimizer], List[torch.optim.lr_scheduler._LRScheduler]]:
-        optimizer = optim.AdamW(self.parameters(), lr=self.hparams.learning_rate, weight_decay=0.0)
+        optimizer = optim.AdamW(self.parameters(), lr=self.hparams['learning_rate'], weight_decay=0.0)
 
-        lr_lambda = lambda epoch: self.hparams.learning_rate * np.minimum(
-            (epoch + 1) ** -0.5, (epoch + 1) * (self.hparams.num_epochs_warmup ** -1.5)
+        lr_lambda = lambda epoch: self.hparams['learning_rate'] * np.minimum(
+            (epoch + 1) ** -0.5, (epoch + 1) * (self.hparams['num_epochs_warmup'] ** -1.5)
         )
         scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
 
@@ -92,8 +96,8 @@ class AbstractLocalizationModule(ptl.LightningModule, abc.ABC):
     def test_epoch_end(self,
                        outputs: List) -> None:
         dataset_name = os.path.split(self.dataset_path)[-1]
-        model_name = '_'.join([self.hparams.name, dataset_name, 'fold' + str(self.cv_fold_idx)])
-        results_file = os.path.join(self.hparams.results_dir, model_name + '.json')
+        model_name = '_'.join([self.hparams['name'], dataset_name, 'fold' + str(self.cv_fold_idx)])
+        results_file = os.path.join(self.hparams['results_dir'], model_name + '.json')
 
         results = {
             'model': [], 'dataset': [], 'fold_idx': [], 'subset_idx': [], 'frame_recall': [], 'doa_error': []
@@ -108,7 +112,7 @@ class AbstractLocalizationModule(ptl.LightningModule, abc.ABC):
             num_sequences = len(frame_recall)
 
             for seq_idx in range(num_sequences):
-                results['model'].append(self.hparams.name)
+                results['model'].append(self.hparams['name'])
                 results['dataset'].append(dataset_name)
                 results['fold_idx'].append(self.cv_fold_idx)
                 results['subset_idx'].append(subset_idx)
@@ -135,50 +139,50 @@ class AbstractLocalizationModule(ptl.LightningModule, abc.ABC):
 
     def train_dataloader(self) -> DataLoader:
         train_dataset = TUTSoundEvents(self.dataset_path, split='train',
-                                       tmp_dir=self.hparams.tmp_dir,
+                                       tmp_dir=self.hparams['tmp_dir'],
                                        test_fold_idx=self.cv_fold_idx,
-                                       sequence_duration=self.hparams.sequence_duration,
-                                       chunk_length=self.hparams.chunk_length,
-                                       frame_length=self.hparams.frame_length,
-                                       num_fft_bins=self.hparams.num_fft_bins,
-                                       max_num_sources=self.hparams.max_num_sources)
+                                       sequence_duration=self.hparams['sequence_duration'],
+                                       chunk_length=self.hparams['chunk_length'],
+                                       frame_length=self.hparams['frame_length'],
+                                       num_fft_bins=self.hparams['num_fft_bins'],
+                                       max_num_sources=self.hparams['max_num_sources'])
 
-        return DataLoader(train_dataset, shuffle=True, batch_size=self.hparams.batch_size,
-                          num_workers=self.hparams.num_workers)
+        return DataLoader(train_dataset, shuffle=True, batch_size=self.hparams['batch_size'],
+                          num_workers=self.hparams['num_workers'])
 
     def val_dataloader(self) -> DataLoader:
         valid_dataset = TUTSoundEvents(self.dataset_path, split='valid',
-                                       tmp_dir=self.hparams.tmp_dir,
+                                       tmp_dir=self.hparams['tmp_dir'],
                                        test_fold_idx=self.cv_fold_idx,
-                                       sequence_duration=self.hparams.sequence_duration,
-                                       chunk_length=self.hparams.chunk_length,
-                                       frame_length=self.hparams.frame_length,
-                                       num_fft_bins=self.hparams.num_fft_bins,
-                                       max_num_sources=self.hparams.max_num_sources)
+                                       sequence_duration=self.hparams['sequence_duration'],
+                                       chunk_length=self.hparams['chunk_length'],
+                                       frame_length=self.hparams['frame_length'],
+                                       num_fft_bins=self.hparams['num_fft_bins'],
+                                       max_num_sources=self.hparams['max_num_sources'])
 
-        return DataLoader(valid_dataset, shuffle=False, batch_size=self.hparams.batch_size,
-                          num_workers=self.hparams.num_workers)
+        return DataLoader(valid_dataset, shuffle=False, batch_size=self.hparams['batch_size'],
+                          num_workers=self.hparams['num_workers'])
 
     def test_dataloader(self) -> List[DataLoader]:
         # During testing, a whole sequence is packed into one batch. The batch size set for training and validation
         # is ignored in this case.
-        num_chunks_per_sequence = int(self.hparams.sequence_duration / self.hparams.chunk_length)
+        num_chunks_per_sequence = int(self.hparams['sequence_duration'] / self.hparams['chunk_length'])
 
         test_loaders = []
 
         for num_overlapping_sources in range(1, 4):
             test_dataset = TUTSoundEvents(self.dataset_path, split='test',
-                                          tmp_dir=self.hparams.tmp_dir,
+                                          tmp_dir=self.hparams['tmp_dir'],
                                           test_fold_idx=self.cv_fold_idx,
-                                          sequence_duration=self.hparams.sequence_duration,
-                                          chunk_length=self.hparams.chunk_length,
-                                          frame_length=self.hparams.frame_length,
-                                          num_fft_bins=self.hparams.num_fft_bins,
-                                          max_num_sources=self.hparams.max_num_sources,
+                                          sequence_duration=self.hparams['sequence_duration'],
+                                          chunk_length=self.hparams['chunk_length'],
+                                          frame_length=self.hparams['frame_length'],
+                                          num_fft_bins=self.hparams['num_fft_bins'],
+                                          max_num_sources=self.hparams['max_num_sources'],
                                           num_overlapping_sources=num_overlapping_sources)
 
             test_loaders.append(DataLoader(test_dataset, shuffle=False, batch_size=num_chunks_per_sequence,
-                                           num_workers=self.hparams.num_workers))
+                                           num_workers=self.hparams['num_workers']))
 
         return test_loaders
 
